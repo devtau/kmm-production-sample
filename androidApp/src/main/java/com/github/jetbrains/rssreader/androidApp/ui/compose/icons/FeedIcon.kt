@@ -1,4 +1,4 @@
-package com.github.jetbrains.rssreader.androidApp.ui.compose
+package com.github.jetbrains.rssreader.androidApp.ui.compose.icons
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -15,17 +15,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.github.jetbrains.rssreader.androidApp.R
+import com.github.jetbrains.rssreader.androidApp.ui.compose.AppTheme
+import com.github.jetbrains.rssreader.androidApp.ui.compose.PreviewData
 import com.github.jetbrains.rssreader.core.entity.Feed
 import com.google.accompanist.coil.rememberCoilPainter
-import java.util.*
+import java.util.Locale
 
 @Composable
 fun FeedIcon(
@@ -51,16 +50,18 @@ fun FeedIcon(
                 .background(color = MaterialTheme.colors.primary)
                 .clickable(enabled = onClick != null, onClick = onClick ?: {})
         ) {
-            Text(
-                modifier = Modifier.align(Alignment.Center),
-                color = MaterialTheme.colors.onPrimary,
-                text = shortName
-            )
-            feed?.imageUrl?.let { url ->
+            val imageUrl = feed?.imageUrl
+            if (feed == null || imageUrl == null) {
+                Text(
+                    modifier = Modifier.align(Alignment.Center),
+                    color = MaterialTheme.colors.onPrimary,
+                    text = shortName
+                )
+            } else {
                 Image(
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Fit,
-                    painter = rememberCoilPainter(url),
+                    painter = rememberCoilPainter(imageUrl),
                     contentDescription = null
                 )
             }
@@ -73,26 +74,6 @@ private fun Feed.shortName(): String =
         .replace(" ", "")
         .take(2)
         .toUpperCase(Locale.getDefault())
-
-@Composable
-fun EditIcon(
-    onClick: () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .size(48.dp)
-            .clip(CircleShape)
-            .background(color = MaterialTheme.colors.secondary)
-            .clickable(onClick = onClick)
-    ) {
-        Image(
-            modifier = Modifier.align(Alignment.Center),
-            imageVector = ImageVector.vectorResource(R.drawable.ic_edit),
-            colorFilter = ColorFilter.tint(MaterialTheme.colors.onSecondary),
-            contentDescription = null
-        )
-    }
-}
 
 @Preview
 @Composable

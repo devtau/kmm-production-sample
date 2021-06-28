@@ -17,6 +17,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.github.jetbrains.rssreader.androidApp.R
+import com.github.jetbrains.rssreader.androidApp.R.string
 import com.github.jetbrains.rssreader.core.entity.Feed
 
 @Composable
@@ -43,6 +44,7 @@ fun AddFeedDialog(
         Button(
             modifier = Modifier.align(Alignment.End),
             onClick = {
+                //TODO: improvement: add url validity check here
                 onAdd(
                     input.value.text.replace("http://", "https://")
                 )
@@ -74,6 +76,42 @@ fun DeleteFeedDialog(
             onClick = { onDelete() }
         ) {
             Text(text = stringResource(id = R.string.remove))
+        }
+    }
+}
+
+@Composable
+fun FilterDialog(
+    onEntered: (String) -> Unit,
+    onDismiss: () -> Unit
+) = Dialog(
+    onDismissRequest = onDismiss
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colors.surface, shape = RoundedCornerShape(8.dp))
+            .padding(16.dp)
+    ) {
+        val defaultFilter = stringResource(string.default_filter)
+        val input = remember { mutableStateOf(TextFieldValue(defaultFilter)) }
+        Text(text = stringResource(id = string.filter))
+        Spacer(modifier = Modifier.size(16.dp))
+        TextField(
+            maxLines = 1,
+            value = input.value,
+            onValueChange = { input.value = it }
+        )
+        Spacer(modifier = Modifier.size(16.dp))
+        Button(
+            modifier = Modifier.align(Alignment.End),
+            onClick = {
+                onEntered(
+                    input.value.text
+                )
+            }
+        ) {
+            Text(text = stringResource(id = string.apply))
         }
     }
 }

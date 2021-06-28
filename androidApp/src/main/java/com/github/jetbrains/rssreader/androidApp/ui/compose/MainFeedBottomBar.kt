@@ -9,10 +9,14 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.github.jetbrains.rssreader.androidApp.ui.compose.icons.EditIcon
+import com.github.jetbrains.rssreader.androidApp.ui.compose.icons.FeedIcon
+import com.github.jetbrains.rssreader.androidApp.ui.compose.icons.FilterIcon
 import com.github.jetbrains.rssreader.core.entity.Feed
 
 private sealed class Icons {
     object All : Icons()
+    object Filter : Icons()
     class FeedIcon(val feed: Feed) : Icons()
     object Edit : Icons()
 }
@@ -21,12 +25,15 @@ private sealed class Icons {
 @Composable
 fun MainFeedBottomBar(
     feeds: List<Feed>,
-    selectedFeed: Feed?,
+    selectedFeedUrl: String?,
     onFeedClick: (Feed?) -> Unit,
+    onFilterClick: () -> Unit,
+    currentFilter: String,
     onEditClick: () -> Unit
 ) {
     val items = buildList {
         add(Icons.All)
+        add(Icons.Filter)
         addAll(feeds.map { Icons.FeedIcon(it) })
         add(Icons.Edit)
     }
@@ -38,12 +45,16 @@ fun MainFeedBottomBar(
             when (item) {
                 is Icons.All -> FeedIcon(
                     feed = null,
-                    isSelected = selectedFeed == null,
+                    isSelected = selectedFeedUrl == null,
                     onClick = { onFeedClick(null) }
+                )
+                is Icons.Filter -> FilterIcon(
+                    isSelected = currentFilter.isNotEmpty(),
+                    onClick = onFilterClick
                 )
                 is Icons.FeedIcon -> FeedIcon(
                     feed = item.feed,
-                    isSelected = selectedFeed == item.feed,
+                    isSelected = selectedFeedUrl == item.feed.sourceUrl,
                     onClick = { onFeedClick(item.feed) }
                 )
                 is Icons.Edit -> EditIcon(onClick = onEditClick)

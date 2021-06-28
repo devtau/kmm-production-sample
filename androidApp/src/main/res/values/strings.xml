@@ -6,4 +6,8 @@
     <string name="cancel">Cancel</string>
     <string name="remove">Remove</string>
     <string name="all">All</string>
+    <string name="no_posts">No posts found with current filter</string>
+    <string name="filter">Filter</string>
+    <string name="apply">Apply</string>
+    <string name="default_filter">multiplatform</string>
 </resources>

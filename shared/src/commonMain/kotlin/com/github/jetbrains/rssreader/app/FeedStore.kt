@@ -14,16 +14,16 @@ import kotlinx.coroutines.launch
 data class FeedState(
     val progress: Boolean,
     val feeds: List<Feed>,
-    val selectedFeed: Feed? = null //null means selected all
+    val selectedFeedUrl: String? = null, //null means selected all
+    val currentFilter: String = ""
 ) : State
-
-fun FeedState.mainFeedPosts() = (selectedFeed?.posts ?: feeds.flatMap { it.posts }).sortedByDescending { it.date }
 
 sealed class FeedAction : Action {
     data class Refresh(val forceLoad: Boolean) : FeedAction()
     data class Add(val url: String) : FeedAction()
     data class Delete(val url: String) : FeedAction()
     data class SelectFeed(val feed: Feed?) : FeedAction()
+    data class FilterFeed(val filter: String) : FeedAction()
     data class Data(val feeds: List<Feed>) : FeedAction()
     data class Error(val error: Exception) : FeedAction()
 }
@@ -54,7 +54,7 @@ class FeedStore(
                     launch { sideEffect.emit(FeedSideEffect.Error(Exception("In progress"))) }
                     oldState
                 } else {
-                    launch { loadAllFeeds(action.forceLoad) }
+                    launch { loadAllFeeds(action.forceLoad, oldState.currentFilter) }
                     oldState.copy(progress = true)
                 }
             }
@@ -63,33 +63,40 @@ class FeedStore(
                     launch { sideEffect.emit(FeedSideEffect.Error(Exception("In progress"))) }
                     oldState
                 } else {
-                    launch { addFeed(action.url) }
-                    FeedState(true, oldState.feeds)
+                    launch { addFeed(action.url, oldState.currentFilter) }
+                    oldState.copy(progress = true)
                 }
             }
+            //TODO: improvement: consider providing user with an option to remove default RSS channels
             is FeedAction.Delete -> {
                 if (oldState.progress) {
                     launch { sideEffect.emit(FeedSideEffect.Error(Exception("In progress"))) }
                     oldState
                 } else {
                     launch { deleteFeed(action.url) }
-                    FeedState(true, oldState.feeds)
+                    oldState.copy(progress = true)
                 }
             }
             is FeedAction.SelectFeed -> {
                 if (action.feed == null || oldState.feeds.contains(action.feed)) {
-                    oldState.copy(selectedFeed = action.feed)
+                    oldState.copy(selectedFeedUrl = action.feed?.sourceUrl)
                 } else {
                     launch { sideEffect.emit(FeedSideEffect.Error(Exception("Unknown feed"))) }
                     oldState
                 }
             }
+            is FeedAction.FilterFeed -> {
+                if (oldState.progress) {
+                    launch { sideEffect.emit(FeedSideEffect.Error(Exception("In progress"))) }
+                    oldState
+                } else {
+                    launch { loadAllFeeds(false, action.filter) }
+                    oldState.copy(progress = true, currentFilter = action.filter)
+                }
+            }
             is FeedAction.Data -> {
                 if (oldState.progress) {
-                    val selected = oldState.selectedFeed?.let {
-                        if (action.feeds.contains(it)) it else null
-                    }
-                    FeedState(false, action.feeds, selected)
+                    oldState.copy(progress = false, feeds = action.feeds)
                 } else {
                     launch { sideEffect.emit(FeedSideEffect.Error(Exception("Unexpected action"))) }
                     oldState
@@ -98,7 +105,7 @@ class FeedStore(
             is FeedAction.Error -> {
                 if (oldState.progress) {
                     launch { sideEffect.emit(FeedSideEffect.Error(action.error)) }
-                    FeedState(false, oldState.feeds)
+                    oldState.copy(progress = false)
                 } else {
                     launch { sideEffect.emit(FeedSideEffect.Error(Exception("Unexpected action"))) }
                     oldState
@@ -107,24 +114,28 @@ class FeedStore(
         }
 
         if (newState != oldState) {
-            Napier.d(tag = "FeedStore", message = "NewState: $newState")
+            val oldStateProductsCount = oldState.feeds.sumBy { it.posts.size }
+            val newStateProductsCount = newState.feeds.sumBy { it.posts.size }
+            val newStateFilter = newState.currentFilter
+            Napier.d(tag = "FeedStore", message = "newStateFilter: $newStateFilter, oldStateProductsCount: $oldStateProductsCount, " +
+                    "newStateProductsCount: $newStateProductsCount")
             state.value = newState
         }
     }
 
-    private suspend fun loadAllFeeds(forceLoad: Boolean) {
+    private suspend fun loadAllFeeds(forceLoad: Boolean, filter: String) {
         try {
-            val allFeeds = rssReader.getAllFeeds(forceLoad)
+            val allFeeds = rssReader.getAllFeeds(forceLoad, filter)
             dispatch(FeedAction.Data(allFeeds))
         } catch (e: Exception) {
             dispatch(FeedAction.Error(e))
         }
     }
 
-    private suspend fun addFeed(url: String) {
+    private suspend fun addFeed(url: String, filter: String) {
         try {
             rssReader.addFeed(url)
-            val allFeeds = rssReader.getAllFeeds(false)
+            val allFeeds = rssReader.getAllFeeds(false, filter)
             dispatch(FeedAction.Data(allFeeds))
         } catch (e: Exception) {
             dispatch(FeedAction.Error(e))
